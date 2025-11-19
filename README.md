@@ -2,6 +2,8 @@
 
 A stunning 3D interactive logo created with Three.js, featuring dynamic lighting, particle effects, and smooth animations.
 
+🌟 **[View Live Demo](https://ujhung.github.io/3d-logo/)**
+
 ## Concept
 
 This 3D logo represents the synergy between people and technology at Pacston.
