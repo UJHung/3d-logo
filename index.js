@@ -19,8 +19,20 @@ const CONFIG = {
     BASE_INTENSITY: 5,
   },
   CAMERA: {
-    FOV_DESKTOP: 50,
-    FOV_MOBILE: 80,
+    FOV_DESKTOP: 60,
+    FOV_MOBILE: 70,
+  },
+  WIREFRAME: {
+    OPACITY_DESKTOP: 0.5,
+    OPACITY_MOBILE: 0.5,
+    EMISSIVE_INTENSITY_DESKTOP: 0.2,
+    EMISSIVE_INTENSITY_MOBILE: 0.2,
+  },
+  STARS: {
+    SMALL_SIZE_DESKTOP: 2,
+    SMALL_SIZE_MOBILE: 5.0,
+    BIG_SIZE_DESKTOP: 70,
+    BIG_SIZE_MOBILE: 180,
   },
 };
 
@@ -43,7 +55,9 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   400
 );
-camera.position.z = 80;
+camera.position.z = isMobile
+  ? CONFIG.CAMERA.FOV_MOBILE
+  : CONFIG.CAMERA.FOV_DESKTOP;
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -89,16 +103,20 @@ let result = capsules.reduce((acc, capsule) =>
   evaluator.evaluate(acc, capsule, ADDITION)
 );
 
-// material setting
+// material setting with mobile optimization
 const material = new THREE.MeshStandardMaterial({
   color: 0x4484ee,
   wireframe: true,
-  opacity: 0.5,
+  opacity: isMobile
+    ? CONFIG.WIREFRAME.OPACITY_MOBILE
+    : CONFIG.WIREFRAME.OPACITY_DESKTOP,
   transparent: true,
   metalness: 0,
   roughness: 1,
   emissive: 0x4484ee,
-  emissiveIntensity: 0,
+  emissiveIntensity: isMobile
+    ? CONFIG.WIREFRAME.EMISSIVE_INTENSITY_MOBILE
+    : CONFIG.WIREFRAME.EMISSIVE_INTENSITY_DESKTOP,
 });
 result.material = material;
 
@@ -176,22 +194,27 @@ starGeometry.setAttribute(
 );
 
 const starTexture = createStarTexture();
+const smallStarSize = isMobile
+  ? CONFIG.STARS.SMALL_SIZE_MOBILE
+  : CONFIG.STARS.SMALL_SIZE_DESKTOP;
 const starMaterial = new THREE.ShaderMaterial({
   uniforms: {
     time: { value: 0 },
     starTexture: { value: starTexture },
     baseColor: { value: new THREE.Color(0xffffff) },
+    starSizeMultiplier: { value: smallStarSize },
   },
   vertexShader: `
     attribute float twinkleSpeed;
     attribute float twinkleOffset;
     varying float vAlpha;
     uniform float time;
+    uniform float starSizeMultiplier;
     
     void main() {
       vAlpha = 0.1 + 0.9 * (sin(time * twinkleSpeed + twinkleOffset) * 0.5 + 0.5);
       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      gl_PointSize = 2.5 * (300.0 / -mvPosition.z);
+      gl_PointSize = starSizeMultiplier * (300.0 / -mvPosition.z);
       gl_Position = projectionMatrix * mvPosition;
     }
   `,
@@ -251,6 +274,10 @@ function createColoredStarTexture(color) {
   return new THREE.CanvasTexture(canvas);
 }
 
+const bigStarSize = isMobile
+  ? CONFIG.STARS.BIG_SIZE_MOBILE
+  : CONFIG.STARS.BIG_SIZE_DESKTOP;
+
 const glowingStars = sphereConfigs.map((config) => {
   const bigStarGeometry = new THREE.BufferGeometry();
   bigStarGeometry.setAttribute(
@@ -266,7 +293,7 @@ const glowingStars = sphereConfigs.map((config) => {
       baseColor: { value: new THREE.Color(config.color) },
       twinkleAmplitude: { value: 0.1 },
       twinkleSpeed: { value: 1.5 },
-      starSize: { value: 70 },
+      starSize: { value: bigStarSize },
     },
     vertexShader: `
       varying float vAlpha;
@@ -317,15 +344,34 @@ const mouse = new THREE.Vector2();
 
 raycaster.params.Points.threshold = 0.1;
 
-canvas.addEventListener("mousemove", (event) => {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+if (isMobile) {
+  // mobile: use touch events
+  canvas.addEventListener("touchstart", (event) => {
+    const touch = event.touches[0];
+    mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
 
-  raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObject(result, false);
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(result, false);
 
-  isHovering = intersects.length > 0;
-});
+    isHovering = intersects.length > 0;
+  });
+
+  canvas.addEventListener("touchend", () => {
+    isHovering = false;
+  });
+} else {
+  // desktop: use mouse hover
+  canvas.addEventListener("mousemove", (event) => {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(result, false);
+
+    isHovering = intersects.length > 0;
+  });
+}
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
