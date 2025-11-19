@@ -19,6 +19,25 @@ This 3D logo represents the synergy between people and technology at Pacston.
 
 The "M" logo at the center symbolizes how these technologies and talents converge to form a unified, powerful organization. The rotating animation represents continuous innovation and growth, while the interactive hover effect invites engagement and exploration.
 
+## Features
+
+### Interactive Effects
+
+- **Hover/Touch Interaction** - Logo rotates faster when hovered (desktop) or touched (mobile)
+- **Click Flash Effect** - Click anywhere to trigger a dramatic flash on the four glowing stars
+  - Stars brighten up to 30x their normal intensity
+  - Size increases by 50% during the flash
+  - Smooth fade-out over 0.5 seconds
+- **Continuous Flicker** - Subtle breathing effect on star lights for a natural, living appearance
+- **Particle System** - Twinkling stars with randomized speeds for organic movement
+
+### Visual Effects
+
+- **Dynamic Lighting** - Point lights with color-matched to each star
+- **Wireframe Geometry** - Semi-transparent M-shaped logo with emissive glow
+- **Custom Shaders** - GLSL shaders for advanced star rendering and effects
+- **Mobile Optimization** - Adjusted star sizes and effects for mobile devices
+
 ## Tech Stack
 
 - **Three.js** (v0.169.0) - 3D graphics library
