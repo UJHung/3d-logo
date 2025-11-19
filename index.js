@@ -12,6 +12,7 @@ const CONFIG = {
   ROTATION_SPEED: {
     NORMAL: 0.002,
     HOVER: 0.012,
+    EASING: 0.05,
   },
   FLICKER: {
     AMPLITUDE: 0.3,
@@ -34,12 +35,49 @@ const CONFIG = {
     BIG_SIZE_DESKTOP: 70,
     BIG_SIZE_MOBILE: 180,
   },
+  FLASH: {
+    DURATION: 0.5,
+    INTENSITY: 30,
+  },
 };
 
 const canvas = document.querySelector("#canvas");
-const renderer = new THREE.WebGLRenderer({ canvas });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+if (!canvas) {
+  console.error("Canvas element not found");
+  throw new Error(
+    "Failed to initialize: Canvas element #canvas not found in DOM"
+  );
+}
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false,
+  });
+
+  // Check WebGL support
+  const gl = renderer.getContext();
+  if (!gl) {
+    throw new Error("WebGL not supported in this browser");
+  }
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+} catch (error) {
+  console.error("Failed to initialize WebGL renderer:", error);
+  document.body.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #0a077e; color: white; text-align: center; padding: 20px;">
+      <div>
+        <h3>WebGL Error</h3>
+        <p>Your browser does not support WebGL or it is disabled.</p>
+        <p style="font-size: 14px; opacity: 0.8;">Please try updating your browser or enabling WebGL in settings.</p>
+      </div>
+    </div>
+  `;
+  throw error;
+}
 
 const scene = new THREE.Scene();
 
@@ -336,6 +374,16 @@ const glowingStars = sphereConfigs.map((config) => {
   return { star: bigStar, light: pointLight, material: bigStarMaterial };
 });
 
+// flash effect state
+let flashStartTime = null;
+let isFlashing = false;
+
+// trigger flash effect on big stars
+function triggerFlash() {
+  flashStartTime = performance.now();
+  isFlashing = true;
+}
+
 // hover action
 let isHovering = false;
 // setup raycaster to detect mouse hover
@@ -355,6 +403,9 @@ if (isMobile) {
     const intersects = raycaster.intersectObject(result, false);
 
     isHovering = intersects.length > 0;
+
+    // trigger flash on touch
+    triggerFlash();
   });
 
   canvas.addEventListener("touchend", () => {
@@ -370,6 +421,11 @@ if (isMobile) {
     const intersects = raycaster.intersectObject(result, false);
 
     isHovering = intersects.length > 0;
+  });
+
+  // click event to trigger flash
+  canvas.addEventListener("click", () => {
+    triggerFlash();
   });
 }
 
@@ -393,30 +449,70 @@ function updateStarTwinkling(deltaTime) {
 }
 
 // update rotation animation
+let currentRotationSpeed = CONFIG.ROTATION_SPEED.NORMAL;
+
 function updateRotation() {
-  const rotationSpeed = isHovering
+  const targetSpeed = isHovering
     ? CONFIG.ROTATION_SPEED.HOVER
     : CONFIG.ROTATION_SPEED.NORMAL;
-  rotatingGroup.rotation.y += rotationSpeed;
+
+  currentRotationSpeed +=
+    (targetSpeed - currentRotationSpeed) * CONFIG.ROTATION_SPEED.EASING;
+
+  rotatingGroup.rotation.y += currentRotationSpeed;
 }
 
 const flickerAmplitude = CONFIG.FLICKER.AMPLITUDE;
 const flickerSpeed = CONFIG.FLICKER.SPEED;
 let baseFlickerTime = 0;
 
+// update flicker effect
+function updateFlickerEffect(deltaTime) {
+  baseFlickerTime += deltaTime;
+  return (
+    1.0 -
+    flickerAmplitude +
+    flickerAmplitude * Math.sin(baseFlickerTime * flickerSpeed * 1000)
+  );
+}
+
+// update flash effect
+function updateFlashEffect() {
+  let flashMultiplier = 1.0;
+
+  if (isFlashing) {
+    const elapsed = (performance.now() - flashStartTime) / 1000;
+    if (elapsed < CONFIG.FLASH.DURATION) {
+      const progress = elapsed / CONFIG.FLASH.DURATION;
+      flashMultiplier = 1.0 + (CONFIG.FLASH.INTENSITY - 1.0) * (1.0 - progress);
+
+      const sizeMultiplier = 1.0 + 0.5 * (1.0 - progress);
+      glowingStars.forEach(({ material }) => {
+        material.uniforms.starSize.value = bigStarSize * sizeMultiplier;
+      });
+    } else {
+      isFlashing = false;
+      flashMultiplier = 1.0;
+      glowingStars.forEach(({ material }) => {
+        material.uniforms.starSize.value = bigStarSize;
+      });
+    }
+  }
+
+  return flashMultiplier;
+}
+
 // update all animations
 function updateAnimations(deltaTime) {
   updateStarTwinkling(deltaTime);
   updateRotation();
 
-  baseFlickerTime += deltaTime;
-  const flicker =
-    1.0 -
-    flickerAmplitude +
-    flickerAmplitude * Math.sin(baseFlickerTime * flickerSpeed * 1000);
+  // update flicker and flash effects on glowing stars
+  const flicker = updateFlickerEffect(deltaTime);
+  const flashMultiplier = updateFlashEffect();
 
   glowingStars.forEach(({ light }) => {
-    light.intensity = 5 * flicker;
+    light.intensity = 5 * flicker * flashMultiplier;
   });
 }
 
