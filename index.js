@@ -99,6 +99,10 @@ camera.position.z = isMobile
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.enablePan = false;
+controls.enableZoom = false;
+controls.minPolarAngle = Math.PI / 2;
+controls.maxPolarAngle = Math.PI / 2;
 
 const rotatingGroup = new THREE.Group();
 scene.add(rotatingGroup);
