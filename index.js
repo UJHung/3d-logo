@@ -12,6 +12,7 @@ const CONFIG = {
   ROTATION_SPEED: {
     NORMAL: 0.002,
     HOVER: 0.012,
+    EASING: 0.05,
   },
   FLICKER: {
     AMPLITUDE: 0.3,
@@ -448,11 +449,17 @@ function updateStarTwinkling(deltaTime) {
 }
 
 // update rotation animation
+let currentRotationSpeed = CONFIG.ROTATION_SPEED.NORMAL;
+
 function updateRotation() {
-  const rotationSpeed = isHovering
+  const targetSpeed = isHovering
     ? CONFIG.ROTATION_SPEED.HOVER
     : CONFIG.ROTATION_SPEED.NORMAL;
-  rotatingGroup.rotation.y += rotationSpeed;
+
+  currentRotationSpeed +=
+    (targetSpeed - currentRotationSpeed) * CONFIG.ROTATION_SPEED.EASING;
+
+  rotatingGroup.rotation.y += currentRotationSpeed;
 }
 
 const flickerAmplitude = CONFIG.FLICKER.AMPLITUDE;
