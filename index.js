@@ -41,9 +41,42 @@ const CONFIG = {
 };
 
 const canvas = document.querySelector("#canvas");
-const renderer = new THREE.WebGLRenderer({ canvas });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+if (!canvas) {
+  console.error("Canvas element not found");
+  throw new Error(
+    "Failed to initialize: Canvas element #canvas not found in DOM"
+  );
+}
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false,
+  });
+
+  // Check WebGL support
+  const gl = renderer.getContext();
+  if (!gl) {
+    throw new Error("WebGL not supported in this browser");
+  }
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+} catch (error) {
+  console.error("Failed to initialize WebGL renderer:", error);
+  document.body.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #0a077e; color: white; text-align: center; padding: 20px;">
+      <div>
+        <h3>WebGL Error</h3>
+        <p>Your browser does not support WebGL or it is disabled.</p>
+        <p style="font-size: 14px; opacity: 0.8;">Please try updating your browser or enabling WebGL in settings.</p>
+      </div>
+    </div>
+  `;
+  throw error;
+}
 
 const scene = new THREE.Scene();
 
