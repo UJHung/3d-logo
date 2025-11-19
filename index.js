@@ -31,9 +31,9 @@ const CONFIG = {
   },
   STARS: {
     SMALL_SIZE_DESKTOP: 2,
-    SMALL_SIZE_MOBILE: 5.0,
+    SMALL_SIZE_MOBILE: 4,
     BIG_SIZE_DESKTOP: 70,
-    BIG_SIZE_MOBILE: 180,
+    BIG_SIZE_MOBILE: 100,
   },
   FLASH: {
     DURATION: 0.5,
@@ -99,6 +99,10 @@ camera.position.z = isMobile
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.enablePan = false;
+controls.enableZoom = false;
+controls.minPolarAngle = Math.PI / 2;
+controls.maxPolarAngle = Math.PI / 2;
 
 const rotatingGroup = new THREE.Group();
 scene.add(rotatingGroup);
